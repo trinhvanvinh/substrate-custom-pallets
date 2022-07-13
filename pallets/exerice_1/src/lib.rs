@@ -1,18 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
-
-// #[cfg(test)]
-// mod mock;
-
-// #[cfg(test)]
-// mod tests;
-
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
 
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
@@ -25,11 +13,11 @@ pub mod pallet {
 
 	#[derive(TypeInfo, Default, Encode, Decode)]
 	#[scale_info(skip_type_params(T))]
-	pub struct Students<T:Config >{
-		name: Vec<u8>,
-		age: u8,
+	pub struct Kitty<T:Config >{
+		dna: Vec<u8>,
+		owner: T::AccountId,
+		price: u32,
 		gender: Gender,
-		account: T::AccountId
 	}
 
 	pub type Id = u32;
@@ -42,84 +30,100 @@ pub mod pallet {
 
 	impl Default for Gender{
 		fn default()-> Self{
-			Gender::Male
+			Gender::Female
 		}
 	}
-
-	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 	}
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/v3/runtime/storage
+	//save count Kitty
 	#[pallet::storage]
-	#[pallet::getter(fn student_id)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type StudentId<T> = StorageValue<_, Id, ValueQuery>;
+	#[pallet::getter(fn kitty_id)]
+	pub type KittyCount<T> = StorageValue<_, Id, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn student)]
-	pub(super) type Student<T: Config> = StorageMap<_, Blake2_128Concat, Id, Students<T>, OptionQuery>;
+	#[pallet::getter(fn kitty)]
+	pub(super) type Kitties<T: Config> = StorageMap<_, Blake2_128Concat, Id, Kitty<T>, OptionQuery>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/v3/runtime/events-and-errors
+	// save info kitty use dna
+	#[pallet::storage]
+	#[pallet::getter(fn Infokitty)]
+	pub(super) type InfoKitty<T:Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
+
+	// save owner kitty
+	#[pallet::storage]
+	#[pallet::getter(fn Ownerkitty)]
+	pub(super) type OwnerKitty<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
+
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		StudentStored(Vec<u8>, u8),
+		KittyStored(Vec<u8>, u32),
 	}
 
-	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		TooYoung,
-		/// Errors should have helpful documentation associated with them.
+		NotOwner,
 		StorageOverflow,
 		
 	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn create_student(origin: OriginFor<T>, name: Vec<u8>, age: u8) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/v3/runtime/origins
+		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>, price: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(age>20, Error::<T>::TooYoung);
-
-			let gender =  Self::gen_gender(name.clone())?;
-			let student = Students{
-				name: name.clone(),
-				age: age,
+			let gender =  Self::gen_gender(dna.clone())?;
+			let _kitty = Kitty{
+				dna: dna.clone(),
+				owner: who,
+				price: price,
 				gender: gender,
-				account: who
+				
 			};
-			let mut current_id = <StudentId<T>>::get();
-			<Student<T>>::insert(current_id, student);
+			let mut current_id = <KittyCount<T>>::get();
+			<Kitties<T>>::insert(current_id, &_kitty);
 			current_id += 1;
-			StudentId::<T>::put(current_id);
-			// Emit an event.
-			Self::deposit_event(Event::StudentStored(name, age));
-			// Return a successful DispatchResultWithPostInfo
+			KittyCount::<T>::put(current_id);
+
+			// Save info kitty follow dna
+			<InfoKitty<T>>::insert(&dna,_kitty);
+
+			
+
+			Self::deposit_event(Event::KittyStored(dna, price));
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn change_owner_kitty(origin: OriginFor<T>, _id: Id, _account: T::AccountId)-> DispatchResult{
+			let who = ensure_signed(origin)?;
+			let _kitties = <Kitties<T>>::get(_id).unwrap();
+
+			// check ensure
+			ensure!(who == _kitties.owner, Error::<T>::NotOwner);
+			
+			let _newKitty = Kitty {
+				dna: _kitties.dna.clone(),
+				owner: _account,
+				price: _kitties.price,
+				gender: _kitties.gender
+			};
+			
+			<Kitties<T>>::insert(_id, &_newKitty);
+
+			// change info kitty
+			<InfoKitty<T>>::insert(_kitties.dna,_newKitty);
+			
+			
 			Ok(())
 		}
 
@@ -127,10 +131,10 @@ pub mod pallet {
 }
 
 impl<T> Pallet<T> {
-	fn gen_gender(name: Vec<u8>) -> Result<Gender, Error<T>>{
-		let mut res = Gender::Male;
-		if name.len() % 2 == 0{
-			res = Gender::Female;
+	fn gen_gender(dna: Vec<u8>) -> Result<Gender, Error<T>>{
+		let mut res = Gender::Female;
+		if dna.len() % 2 == 0{
+			res = Gender::Male;
 		}
 		Ok(res)
 	}
