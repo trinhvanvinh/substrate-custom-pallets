@@ -72,7 +72,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		NotOwner,
 		StorageOverflow,
-		
+		KittyNotExist
 	}
 
 	#[pallet::call]
@@ -84,7 +84,7 @@ pub mod pallet {
 			let gender =  Self::gen_gender(dna.clone())?;
 			let _kitty = Kitty{
 				dna: dna.clone(),
-				owner: who,
+				owner: who.clone(),
 				price: price,
 				gender: gender,
 				
@@ -97,8 +97,19 @@ pub mod pallet {
 			// Save info kitty follow dna
 			<InfoKitty<T>>::insert(&dna,_kitty);
 
+			// owner sở hữu bao nhiêu kitty: map(accountId => vec<dna>)
+			 let ownerKitty = OwnerKitty::<T>::get(&who);
+			 match ownerKitty{
+				 Some(mut vector) =>{
+					for val in &dna{
+						vector.push(*val);
+					}
+					OwnerKitty::<T>::insert(who, vector);
+				 } ,
+				 None => OwnerKitty::<T>::insert(who,&dna) ,
+			 }
+				
 			
-
 			Self::deposit_event(Event::KittyStored(dna, price));
 			Ok(())
 		}
@@ -113,7 +124,7 @@ pub mod pallet {
 			
 			let _newKitty = Kitty {
 				dna: _kitties.dna.clone(),
-				owner: _account,
+				owner: _account.clone(),
 				price: _kitties.price,
 				gender: _kitties.gender
 			};
@@ -121,8 +132,39 @@ pub mod pallet {
 			<Kitties<T>>::insert(_id, &_newKitty);
 
 			// change info kitty
-			<InfoKitty<T>>::insert(_kitties.dna,_newKitty);
-			
+			<InfoKitty<T>>::insert(&_kitties.dna,_newKitty);
+
+			// owner sở hữu bao nhiêu kitty: map(accountId => vec<dna>)
+			let ownerKittyOld = OwnerKitty::<T>::get(&who);
+			match ownerKittyOld{
+				Some(mut vector) =>{
+					// remove
+					for val in &_kitties.dna{
+						let index = vector.iter().position(|x| x == val).unwrap();
+						vector.remove(index);
+					}
+				
+				   OwnerKitty::<T>::insert(who, vector);
+				} ,
+				None => {}
+			};
+
+			let ownerKittyNew = OwnerKitty::<T>::get(&_account);
+			match ownerKittyNew{
+				Some(mut vectornew) =>{
+					// add
+					for val in &_kitties.dna{
+						vectornew.push(*val);
+					}
+
+				   OwnerKitty::<T>::insert(_account, vectornew);
+				  
+				} ,
+				None => {
+					OwnerKitty::<T>::insert(_account, &_kitties.dna);
+				}
+			};
+
 			
 			Ok(())
 		}
