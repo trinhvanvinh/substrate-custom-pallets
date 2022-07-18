@@ -278,6 +278,7 @@ impl pallet_demo::Config for Runtime {
 
 impl pallet_kitties::Config for Runtime {
 	type Event = Event;
+	type Currency = Balances;
 }
 
 impl pallet_tightly_coupling::Config for Runtime {
@@ -286,8 +287,7 @@ impl pallet_tightly_coupling::Config for Runtime {
 
 impl pallet_loosely_coupling::Config for Runtime {
 	type Event = Event;
-	//type Increase = TemplateModule;
-	type Currency = Balance;
+	type Increase = TemplateModule;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -302,7 +302,7 @@ construct_runtime!(
 		Timestamp: pallet_timestamp,
 		Aura: pallet_aura,
 		Grandpa: pallet_grandpa,
-		Balances: pallet_balances,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.

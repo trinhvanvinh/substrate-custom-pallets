@@ -6,6 +6,10 @@ use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use frame_support::inherent::Vec;
 use frame_support::dispatch::fmt;
+use scale_info::TypeInfo;
+pub type Id = u32;
+use frame_support::traits::Currency;
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -36,6 +40,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type Currency: Currency<Self::AccountId>;
 	}
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -80,6 +85,8 @@ pub mod pallet {
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>, price: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+
+			log::info!("total balance {:?}", T::Currency::total_balance(&who));
 
 			let gender =  Self::gen_gender(dna.clone())?;
 			let _kitty = Kitty{

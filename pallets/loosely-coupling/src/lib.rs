@@ -5,17 +5,12 @@
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
 
-#[cfg(test)]
-mod mock;
 
-#[cfg(test)]
-mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
+use frame_support::traits::Currency;
+
 use pallet_template::DoSome;
 
 #[frame_support::pallet]
@@ -27,6 +22,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		//type LocalCurrency: Currency<Self::AccountId>;
+
 		type Increase: DoSome;
 	}
 
@@ -75,10 +72,12 @@ pub mod pallet {
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
 
+			//let total_balance = T::LocalCurrency::total_issuance();
+
 			let new_value = T::Increase::increase_value(something);
 
 			// Emit an event.
-			Self::deposit_event(Event::IncreseSuccess(new_value));
+			Self::deposit_event(Event::IncreseSuccess(123));
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}

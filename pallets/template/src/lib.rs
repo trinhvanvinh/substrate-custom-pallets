@@ -15,7 +15,7 @@ mod tests;
 mod benchmarking;
 
 use frame_support::pallet_prelude::*;
-use frame_support::traits::Currency;
+//use frame_support::traits::Currency;
 use frame_system::pallet_prelude::*;
 
 #[frame_support::pallet]
@@ -28,7 +28,7 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Currency: Currency<Self::AccountId>;
+		//type Currency: Currency<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -75,6 +75,7 @@ pub mod pallet {
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
+			//let who2 = Config::Pallet::<T>::get();
 
 			// Update storage.
 			<Something<T>>::put(something);
@@ -113,7 +114,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 }
-
+// for loosely-coupling
 pub trait DoSome {
 	fn increase_value(value: u32) -> u32;
 }
