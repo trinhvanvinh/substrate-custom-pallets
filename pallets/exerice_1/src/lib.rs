@@ -9,7 +9,8 @@ use frame_support::dispatch::fmt;
 use scale_info::TypeInfo;
 pub type Id = u32;
 use frame_support::traits::Currency;
-
+use frame_support::traits::Time;
+use frame_support::storage::bounded_vec::BoundedVec;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -17,11 +18,14 @@ pub mod pallet {
 
 	#[derive(TypeInfo, Default, Encode, Decode)]
 	#[scale_info(skip_type_params(T))]
+	#[codec(mel_bound())]
 	pub struct Kitty<T:Config >{
 		dna: Vec<u8>,
 		owner: T::AccountId,
 		price: u32,
 		gender: Gender,
+		//exercise 2
+		created_date: <<T as Config>::Time as Time>::Moment,
 	}
 
 	pub type Id = u32;
@@ -41,6 +45,11 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
+
+		#[pallet::constant]
+		type MaxKittyOwned: Get<u32>;
+
+		type Time: Time;
 	}
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -53,7 +62,7 @@ pub mod pallet {
 	pub type KittyCount<T> = StorageValue<_, Id, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn kitty)]
+	#[pallet::getter(fn kitties)]
 	pub(super) type Kitties<T: Config> = StorageMap<_, Blake2_128Concat, Id, Kitty<T>, OptionQuery>;
 
 	// save info kitty use dna
@@ -94,7 +103,7 @@ pub mod pallet {
 				owner: who.clone(),
 				price: price,
 				gender: gender,
-				
+				created_date: T::Time::now()
 			};
 			let mut current_id = <KittyCount<T>>::get();
 			<Kitties<T>>::insert(current_id, &_kitty);
@@ -133,7 +142,8 @@ pub mod pallet {
 				dna: _kitties.dna.clone(),
 				owner: _account.clone(),
 				price: _kitties.price,
-				gender: _kitties.gender
+				gender: _kitties.gender,
+				created_date: _kitties.created_date
 			};
 			
 			<Kitties<T>>::insert(_id, &_newKitty);

@@ -279,6 +279,8 @@ impl pallet_demo::Config for Runtime {
 impl pallet_kitties::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
+
+	type Time = Timestamp;
 }
 
 impl pallet_tightly_coupling::Config for Runtime {
