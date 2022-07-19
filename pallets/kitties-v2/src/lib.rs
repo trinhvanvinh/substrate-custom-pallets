@@ -5,15 +5,16 @@
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
 
+use frame_support::inherent::Vec;
 use frame_support::pallet_prelude::*;
-use frame_system::pallet_prelude::*;
+use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::traits::Currency;
 use frame_support::traits::Time;
-use frame_support::storage::bounded_vec::BoundedVec;
-use frame_support::inherent::Vec;
+use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 
-type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -21,20 +22,20 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
-	pub struct Kitty<T:Config>{
+	pub struct Kitty<T: Config> {
 		dna: Vec<u8>,
 		owner: T::AccountId,
 		price: u32,
 		gender: Gender,
-		created_date: <<T as Config>::Time as Time >::Moment
+		created_date: <<T as Config>::Time as Time>::Moment,
 	}
 
 	pub type Id = u32;
 
 	#[derive(Clone, Encode, Decode, TypeInfo)]
-	pub enum Gender{
+	pub enum Gender {
 		Male,
-		Female
+		Female,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -44,7 +45,6 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
 		type Time: Time;
-		
 	}
 
 	#[pallet::pallet]
@@ -67,11 +67,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_kitty)]
-	pub(super) type Kitties<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
+	pub(super) type Kitties<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn kitty_owned)]
-	pub(super) type KittiesOwned<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
+	pub(super) type KittiesOwned<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -82,8 +84,8 @@ pub mod pallet {
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 
-		Created{},
-		Transfer{}
+		Created {},
+		Transfer {},
 	}
 
 	// Errors inform users that something went wrong.
@@ -98,7 +100,7 @@ pub mod pallet {
 		TooManyOwned,
 		NoKitty,
 		NotOwner,
-		TransferToSelf
+		TransferToSelf,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -142,12 +144,29 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>, price: u32 )-> DispatchResult{
-
+		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>, price: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			log::info!("total balance {:?}", T::Currency::total_balance(&who));
+			let _gender = Self::gen_gender(&dna)?;
+			let _kitty = Kitty::<T>{
+				dna: dna.clone(),
+				owner: who,
+				price: price,
+				gender: _gender,
+				created_date: T::Time::now()
+			};
 
 			Ok(())
 		}
+	}
+}
+
+impl<T> Pallet<T> {
+	fn gen_gender(dna: &Vec<u8>) -> Result<Gender, Error<T>> {
+		let mut res = Gender::Female;
+		if (dna.len() % 2 == 0) {
+			res = Gender::Male;
+		}
+		Ok((res))
 	}
 }
