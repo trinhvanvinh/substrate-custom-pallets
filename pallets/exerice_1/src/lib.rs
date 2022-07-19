@@ -46,8 +46,8 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
 
-		#[pallet::constant]
-		type MaxKittyOwned: Get<u32>;
+		// #[pallet::constant]
+		// type MaxKittyOwned: Get<u32>;
 
 		type Time: Time;
 	}

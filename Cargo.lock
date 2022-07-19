@@ -4058,6 +4058,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-kitties-v2"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-loosely-coupling"
 version = "4.0.0-dev"
 dependencies = [
