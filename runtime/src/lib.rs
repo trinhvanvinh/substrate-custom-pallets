@@ -49,6 +49,7 @@ pub use pallet_template;
 pub use pallet_demo;
 
 pub use pallet_kitties;
+pub use pallet_kitties_v2;
 pub use pallet_loosely_coupling;
 pub use pallet_tightly_coupling;
 
@@ -283,6 +284,19 @@ impl pallet_kitties::Config for Runtime {
 	type Time = Timestamp;
 }
 
+parameter_types!{
+	pub const MaxKittyOwned: u32 =  10;
+}
+impl pallet_kitties_v2::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+
+	type Time = Timestamp;
+
+	type MaxKittyOwned = MaxKittyOwned;
+	type KittyRandomness = RandomnessCollectiveFlip;
+}
+
 impl pallet_tightly_coupling::Config for Runtime {
 	type Event = Event;
 }
@@ -313,6 +327,7 @@ construct_runtime!(
 		DemoModule: pallet_demo,
 
 		KittiesModule: pallet_kitties,
+		KittiesModuleV2: pallet_kitties_v2,
 
 		TightlyCouplingModule: pallet_tightly_coupling,
 		LooselyCouplingModule: pallet_loosely_coupling,
@@ -365,6 +380,8 @@ mod benches {
 
 		[pallet_demo, DemoModule]
 		[pallet_kitties, KittiesModule]
+
+		[pallet_kitties_v2, KittiesModuleV2]
 	);
 }
 

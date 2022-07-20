@@ -3771,6 +3771,7 @@ dependencies = [
  "pallet-demo",
  "pallet-grandpa",
  "pallet-kitties",
+ "pallet-kitties-v2",
  "pallet-loosely-coupling",
  "pallet-randomness-collective-flip",
  "pallet-sudo",

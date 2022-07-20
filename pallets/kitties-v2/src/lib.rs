@@ -13,6 +13,9 @@ use frame_support::traits::Time;
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 use frame_support::sp_runtime::ArithmeticError;
+use frame_support::traits::Randomness;
+use sp_io::hashing::blake2_128;
+use frame_support::sp_runtime::traits::Hash;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -49,6 +52,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxKittyOwned: Get<u32>;
+
+		type KittyRandomness: Randomness<Self::Hash, Self::BlockNumber>;
 	}
 
 	#[pallet::pallet]
@@ -78,6 +83,9 @@ pub mod pallet {
 	#[pallet::getter(fn kitty_owned)]
 	pub(super) type KittiesOwned<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<Vec<u8>>, ValueQuery>;
+
+	#[pallet::hooks]
+	impl<T:Config> Hooks<BlockNumberFor<T>> for Pallet<T>{}	
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -154,6 +162,9 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			log::info!("total balance {:?}", T::Currency::total_balance(&who));
 			let _gender = Self::gen_gender(&dna)?;
+
+			Self::gen_dna();
+
 			let _kitty = Kitty::<T>{
 				dna: dna.clone(),
 				owner: who.clone(),
@@ -169,6 +180,8 @@ pub mod pallet {
 
 			Kitties::<T>::insert(&dna, _kitty);
 			KittyId::<T>::put(next_id);
+
+			log::info!("MaxKittyOwned {}", T::MaxKittyOwned::get());
 
 			let mut _to_owned = KittiesOwned::<T>::get(&who);
 			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
@@ -194,7 +207,7 @@ pub mod pallet {
 				return Err(Error::<T>::NoKitty.into());
 			}
 			let mut _to_owned = KittiesOwned::<T>::get(&to);
-
+			log::info!("MaxKittyOwned2 {}", T::MaxKittyOwned::get());
 			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
 
 			_to_owned.push(dna.clone());
@@ -211,12 +224,18 @@ pub mod pallet {
 	}
 }
 
-impl<T> Pallet<T> {
+impl<T: Config> Pallet<T> {
 	fn gen_gender(dna: &Vec<u8>) -> Result<Gender, Error<T>> {
 		let mut res = Gender::Female;
-		if (dna.len() % 2 == 0) {
+		if dna.len() % 2 == 0 {
 			res = Gender::Male;
 		}
-		Ok((res))
+		Ok(res)
+	}
+
+	fn gen_dna() {	
+		
+		let rand = T::KittyRandomness::random(&b"dna"[..]);
+		log::info!("random {:?}", rand);
 	}
 }
