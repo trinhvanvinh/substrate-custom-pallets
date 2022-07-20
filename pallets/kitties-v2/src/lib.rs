@@ -87,6 +87,8 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T:Config> Hooks<BlockNumberFor<T>> for Pallet<T>{}	
 
+	#[pallet::storage]
+	pub type Nonce<T> = StorageValue< _,u32>;
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
@@ -234,8 +236,22 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn gen_dna() {	
-		
-		let rand = T::KittyRandomness::random(&b"dna"[..]);
-		log::info!("random {:?}", rand);
+		//let nonce = Nonce::<T>::get();
+		// let rand = T::KittyRandomness::random(&b"dna"[..]);
+		// log::info!("random {:?}", rand);
+
+		let nonce = Self::get_and_increment_nonce();
+		let (randomValue, _) = T::KittyRandomness::random(&nonce);
+		//log::info!("randomValue {:?}", randomValue);
+
+	}
+
+	fn get_and_increment_nonce() -> Vec<u8> {
+		let nonce = Nonce::<T>::get();
+		match nonce{
+			Some(a) => Nonce::<T>::put(nonce.unwrap() + 1) ,
+			None => Nonce::<T>::put(1)
+		}
+		nonce.encode()
 	}
 }
