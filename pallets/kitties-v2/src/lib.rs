@@ -12,6 +12,7 @@ use frame_support::traits::Currency;
 use frame_support::traits::Time;
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
+use frame_support::sp_runtime::ArithmeticError;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -20,7 +21,7 @@ type BalanceOf<T> =
 pub mod pallet {
 	pub use super::*;
 
-	#[derive(Clone, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Encode, Decode, TypeInfo,PartialEq, RuntimeDebug)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Kitty<T: Config> {
 		dna: Vec<u8>,
@@ -32,7 +33,7 @@ pub mod pallet {
 
 	pub type Id = u32;
 
-	#[derive(Clone, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, RuntimeDebug, Copy, MaxEncodedLen)]
 	pub enum Gender {
 		Male,
 		Female,
@@ -73,7 +74,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn kitty_owned)]
 	pub(super) type KittiesOwned<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<Vec<u8>>, ValueQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -84,8 +85,8 @@ pub mod pallet {
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 
-		Created {},
-		Transfer {},
+		Created {dna: Vec<u8>, owner: T::AccountId},
+		Transfer {from: T::AccountId, to: T::AccountId, dna: Vec<u8>},
 	}
 
 	// Errors inform users that something went wrong.
@@ -150,11 +151,49 @@ pub mod pallet {
 			let _gender = Self::gen_gender(&dna)?;
 			let _kitty = Kitty::<T>{
 				dna: dna.clone(),
-				owner: who,
+				owner: who.clone(),
 				price: price,
 				gender: _gender,
 				created_date: T::Time::now()
 			};
+			// check not exist
+			ensure!(!Kitties::<T>::contains_key(&dna), Error::<T>::DuplicateKitty);
+
+			let current_id = KittyId::<T>::get();
+			let next_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+
+			Kitties::<T>::insert(&dna, _kitty);
+			KittyId::<T>::put(next_id);
+
+			KittiesOwned::<T>::append(&who, &dna);
+
+			Self::deposit_event(Event::Created{dna: dna, owner: who });
+
+			Ok(())
+		}
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn transfer(origin: OriginFor<T>, dna: Vec<u8>, to: T::AccountId)-> DispatchResult{
+			let who = ensure_signed(origin)?;
+			let mut _kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::NoKitty)?;
+			ensure!(_kitty.owner == who, Error::<T>::NotOwner);
+			ensure!(who != to , Error::<T>::TransferToSelf);
+
+			let mut _from_owned = KittiesOwned::<T>::get(&who);
+			// remove of who
+			if let Some(index) = _from_owned.iter().position(|ids| *ids == dna ){
+				_from_owned.swap_remove(index);
+			}else{
+				return Err(Error::<T>::NoKitty.into());
+			}
+			let mut _to_owned = KittiesOwned::<T>::get(&to);
+			_to_owned.push(dna.clone());
+			_kitty.owner = to.clone();
+
+			Kitties::<T>::insert(&dna, _kitty);
+			KittiesOwned::<T>::insert(&to, _to_owned);
+			KittiesOwned::<T>::insert(&who, _from_owned);
+
+			Self::deposit_event(Event::Transfer{from: who , to: to, dna: dna});
 
 			Ok(())
 		}
