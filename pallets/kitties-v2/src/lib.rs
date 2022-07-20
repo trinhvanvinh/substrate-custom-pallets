@@ -46,6 +46,9 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
 		type Time: Time;
+
+		#[pallet::constant]
+		type MaxKittyOwned: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -102,6 +105,8 @@ pub mod pallet {
 		NoKitty,
 		NotOwner,
 		TransferToSelf,
+
+		ExceedMaxKittyOwned
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -165,6 +170,9 @@ pub mod pallet {
 			Kitties::<T>::insert(&dna, _kitty);
 			KittyId::<T>::put(next_id);
 
+			let mut _to_owned = KittiesOwned::<T>::get(&who);
+			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
+
 			KittiesOwned::<T>::append(&who, &dna);
 
 			Self::deposit_event(Event::Created{dna: dna, owner: who });
@@ -186,6 +194,9 @@ pub mod pallet {
 				return Err(Error::<T>::NoKitty.into());
 			}
 			let mut _to_owned = KittiesOwned::<T>::get(&to);
+
+			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
+
 			_to_owned.push(dna.clone());
 			_kitty.owner = to.clone();
 
