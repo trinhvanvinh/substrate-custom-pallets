@@ -285,7 +285,7 @@ impl pallet_kitties::Config for Runtime {
 }
 
 parameter_types!{
-	pub const MaxKittyOwned: u32 =  10;
+	pub const MaxKittyOwned: u32 = 5;
 }
 impl pallet_kitties_v2::Config for Runtime {
 	type Event = Event;

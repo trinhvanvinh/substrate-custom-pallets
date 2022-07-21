@@ -165,10 +165,8 @@ pub mod pallet {
 			log::info!("total balance {:?}", T::Currency::total_balance(&who));
 			let _gender = Self::gen_gender(&dna)?;
 
-			Self::gen_dna();
-
 			let _kitty = Kitty::<T>{
-				dna: dna.clone(),
+				dna: Self::gen_dna(),
 				owner: who.clone(),
 				price: price,
 				gender: _gender,
@@ -235,15 +233,16 @@ impl<T: Config> Pallet<T> {
 		Ok(res)
 	}
 
-	fn gen_dna() {	
-		//let nonce = Nonce::<T>::get();
-		// let rand = T::KittyRandomness::random(&b"dna"[..]);
-		// log::info!("random {:?}", rand);
-
+	fn gen_dna() -> Vec<u8> {	
 		let nonce = Self::get_and_increment_nonce();
-		let (randomValue, _) = T::KittyRandomness::random(&nonce);
-		//log::info!("randomValue {:?}", randomValue);
+		let rand = T::KittyRandomness::random(&nonce).0;
+		log::info!("random {:?}", rand.as_ref().to_vec());
+		rand.as_ref().to_vec()
 
+		// let nonce = Self::get_and_increment_nonce();
+		// let (randomValue, _) = T::KittyRandomness::random(&nonce);
+		// log::info!("randomValue {:?}", randomValue);
+		// randomValue as u8
 	}
 
 	fn get_and_increment_nonce() -> Vec<u8> {
