@@ -14,38 +14,44 @@ pub use pallet::*;
 // #[cfg(feature = "runtime-benchmarks")]
 // mod benchmarking;
 
-use frame_support::pallet_prelude::*;
+use frame_support::{dispatch::fmt, inherent::Vec, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
-use frame_support::inherent::Vec;
-use frame_support::dispatch::fmt;
 
 #[frame_support::pallet]
 pub mod pallet {
 	pub use super::*;
-
 	#[derive(TypeInfo, Default, Encode, Decode)]
 	#[scale_info(skip_type_params(T))]
-	pub struct Students<T:Config >{
+	pub struct Students<T: Config> {
 		name: Vec<u8>,
 		age: u8,
 		gender: Gender,
-		account: T::AccountId
+		account: T::AccountId,
+	}
+
+	impl<T: Config> fmt::Debug for Students<T> {
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.debug_struct("Students")
+				.field("name", &self.name)
+				.field("age", &self.gender)
+				.field("account", &self.account)
+				.finish()
+		}
 	}
 
 	pub type Id = u32;
 
-	#[derive(TypeInfo, Encode, Decode)]
-	pub enum Gender{
+	#[derive(TypeInfo, Encode, Decode, Debug, Clone)]
+	pub enum Gender {
 		Male,
-		Female
+		Female,
 	}
 
-	impl Default for Gender{
-		fn default()-> Self{
+	impl Default for Gender {
+		fn default() -> Self {
 			Gender::Male
 		}
 	}
-
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -66,9 +72,12 @@ pub mod pallet {
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type StudentId<T> = StorageValue<_, Id, ValueQuery>;
 
+	// key : id
+	//value : student
 	#[pallet::storage]
 	#[pallet::getter(fn student)]
-	pub(super) type Student<T: Config> = StorageMap<_, Blake2_128Concat, Id, Students<T>, OptionQuery>;
+	pub(super) type Student<T: Config> =
+		StorageMap<_, Blake2_128Concat, Id, Students<T>, OptionQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -87,12 +96,13 @@ pub mod pallet {
 		TooYoung,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
-		
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
+
+	//extrinsic
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
@@ -103,17 +113,19 @@ pub mod pallet {
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
-
-			ensure!(age>20, Error::<T>::TooYoung);
-
-			let gender =  Self::gen_gender(name.clone())?;
-			let student = Students{
-				name: name.clone(),
-				age: age,
-				gender: gender,
-				account: who
-			};
+			ensure!(age > 20, Error::<T>::TooYoung);
+			let gender = Self::gen_gender(name.clone())?;
+			let student =
+				Students { name: name.clone(), age, gender: gender.clone(), account: who };
+			// let current_id = Self::student_id();
+			// let current_id = StudentId::<T>::get();
 			let mut current_id = <StudentId<T>>::get();
+
+			log::info!("Current id : {}", current_id);
+			log::info!("Genderr : {:?}", gender);
+			log::warn!("Student : {:?}", &student);
+
+			// Student::<T>::insert(current_id, student);
 			<Student<T>>::insert(current_id, student);
 			current_id += 1;
 			StudentId::<T>::put(current_id);
@@ -122,14 +134,15 @@ pub mod pallet {
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
-
 	}
 }
 
+// helper function
+
 impl<T> Pallet<T> {
-	fn gen_gender(name: Vec<u8>) -> Result<Gender, Error<T>>{
+	fn gen_gender(name: Vec<u8>) -> Result<Gender, Error<T>> {
 		let mut res = Gender::Male;
-		if name.len() % 2 == 0{
+		if name.len() % 2 == 0 {
 			res = Gender::Female;
 		}
 		Ok(res)

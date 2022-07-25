@@ -4,6 +4,11 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
 
 use frame_support::dispatch::fmt;
 use frame_support::inherent::Vec;
