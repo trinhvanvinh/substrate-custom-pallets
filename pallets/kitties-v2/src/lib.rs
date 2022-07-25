@@ -5,17 +5,18 @@
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
 
+use frame_support::dispatch::fmt;
 use frame_support::inherent::Vec;
 use frame_support::pallet_prelude::*;
+use frame_support::sp_runtime::traits::Hash;
+use frame_support::sp_runtime::ArithmeticError;
 use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::traits::Currency;
+use frame_support::traits::Randomness;
 use frame_support::traits::Time;
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
-use frame_support::sp_runtime::ArithmeticError;
-use frame_support::traits::Randomness;
 use sp_io::hashing::blake2_128;
-use frame_support::sp_runtime::traits::Hash;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -24,7 +25,7 @@ type BalanceOf<T> =
 pub mod pallet {
 	pub use super::*;
 
-	#[derive(Clone, Encode, Decode, TypeInfo,PartialEq, RuntimeDebug)]
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Kitty<T: Config> {
 		dna: Vec<u8>,
@@ -34,9 +35,22 @@ pub mod pallet {
 		created_date: <<T as Config>::Time as Time>::Moment,
 	}
 
+	// impl Debug trait Kitty
+	impl<T: Config> fmt::Debug for Kitty<T> {
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.debug_struct("Kitty")
+				.field("dna", &self.dna)
+				.field("owner", &self.owner)
+				.field("price", &self.price)
+				.field("gender", &self.gender)
+				.field("created_date", &self.created_date)
+				.finish()
+		}
+	}
+
 	pub type Id = u32;
 
-	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, RuntimeDebug, Copy, MaxEncodedLen)]
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Copy, MaxEncodedLen, Debug)]
 	pub enum Gender {
 		Male,
 		Female,
@@ -85,10 +99,10 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<Vec<u8>>, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T:Config> Hooks<BlockNumberFor<T>> for Pallet<T>{}	
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::storage]
-	pub type Nonce<T> = StorageValue< _,u32>;
+	pub type Nonce<T> = StorageValue<_, u32>;
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
@@ -98,8 +112,15 @@ pub mod pallet {
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 
-		Created {dna: Vec<u8>, owner: T::AccountId},
-		Transfer {from: T::AccountId, to: T::AccountId, dna: Vec<u8>},
+		Created {
+			dna: Vec<u8>,
+			owner: T::AccountId,
+		},
+		Transfer {
+			from: T::AccountId,
+			to: T::AccountId,
+			dna: Vec<u8>,
+		},
 	}
 
 	// Errors inform users that something went wrong.
@@ -116,7 +137,7 @@ pub mod pallet {
 		NotOwner,
 		TransferToSelf,
 
-		ExceedMaxKittyOwned
+		ExceedMaxKittyOwned,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -165,15 +186,18 @@ pub mod pallet {
 			log::info!("total balance {:?}", T::Currency::total_balance(&who));
 			let _gender = Self::gen_gender(&dna)?;
 
-			let _kitty = Kitty::<T>{
+			let _kitty = Kitty::<T> {
 				dna: Self::gen_dna(),
 				owner: who.clone(),
-				price: price,
+				price,
 				gender: _gender,
-				created_date: T::Time::now()
+				created_date: T::Time::now(),
 			};
 			// check not exist
 			ensure!(!Kitties::<T>::contains_key(&dna), Error::<T>::DuplicateKitty);
+
+			// using debug for log kitty
+			log::info!("Kitty {:?}", &_kitty);
 
 			let current_id = KittyId::<T>::get();
 			let next_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
@@ -184,31 +208,37 @@ pub mod pallet {
 			log::info!("MaxKittyOwned {}", T::MaxKittyOwned::get());
 
 			let mut _to_owned = KittiesOwned::<T>::get(&who);
-			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
+			ensure!(
+				(_to_owned.len() as u32) < T::MaxKittyOwned::get(),
+				Error::<T>::ExceedMaxKittyOwned
+			);
 
 			KittiesOwned::<T>::append(&who, &dna);
 
-			Self::deposit_event(Event::Created{dna: dna, owner: who });
+			Self::deposit_event(Event::Created { dna, owner: who });
 
 			Ok(())
 		}
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn transfer(origin: OriginFor<T>, dna: Vec<u8>, to: T::AccountId)-> DispatchResult{
+		pub fn transfer(origin: OriginFor<T>, dna: Vec<u8>, to: T::AccountId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut _kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::NoKitty)?;
 			ensure!(_kitty.owner == who, Error::<T>::NotOwner);
-			ensure!(who != to , Error::<T>::TransferToSelf);
+			ensure!(who != to, Error::<T>::TransferToSelf);
 
 			let mut _from_owned = KittiesOwned::<T>::get(&who);
 			// remove of who
-			if let Some(index) = _from_owned.iter().position(|ids| *ids == dna ){
+			if let Some(index) = _from_owned.iter().position(|ids| *ids == dna) {
 				_from_owned.swap_remove(index);
-			}else{
+			} else {
 				return Err(Error::<T>::NoKitty.into());
 			}
 			let mut _to_owned = KittiesOwned::<T>::get(&to);
 			log::info!("MaxKittyOwned2 {}", T::MaxKittyOwned::get());
-			ensure!((_to_owned.len() as u32) < T::MaxKittyOwned::get(), Error::<T>::ExceedMaxKittyOwned );
+			ensure!(
+				(_to_owned.len() as u32) < T::MaxKittyOwned::get(),
+				Error::<T>::ExceedMaxKittyOwned
+			);
 
 			_to_owned.push(dna.clone());
 			_kitty.owner = to.clone();
@@ -217,7 +247,7 @@ pub mod pallet {
 			KittiesOwned::<T>::insert(&to, _to_owned);
 			KittiesOwned::<T>::insert(&who, _from_owned);
 
-			Self::deposit_event(Event::Transfer{from: who , to: to, dna: dna});
+			Self::deposit_event(Event::Transfer { from: who, to, dna });
 
 			Ok(())
 		}
@@ -233,7 +263,7 @@ impl<T: Config> Pallet<T> {
 		Ok(res)
 	}
 
-	fn gen_dna() -> Vec<u8> {	
+	fn gen_dna() -> Vec<u8> {
 		let nonce = Self::get_and_increment_nonce();
 		let rand = T::KittyRandomness::random(&nonce).0;
 		log::info!("random {:?}", rand.as_ref().to_vec());
@@ -247,9 +277,9 @@ impl<T: Config> Pallet<T> {
 
 	fn get_and_increment_nonce() -> Vec<u8> {
 		let nonce = Nonce::<T>::get();
-		match nonce{
-			Some(a) => Nonce::<T>::put(nonce.unwrap() + 1) ,
-			None => Nonce::<T>::put(1)
+		match nonce {
+			Some(a) => Nonce::<T>::put(nonce.unwrap() + 1),
+			None => Nonce::<T>::put(1),
 		}
 		nonce.encode()
 	}
