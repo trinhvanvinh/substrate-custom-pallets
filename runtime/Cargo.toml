@@ -106,6 +106,9 @@ runtime-benchmarks = [
 	"pallet-template/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+
+	"pallet-kitties-v2/runtime-benchmarks",
+
 ]
 try-runtime = [
 	"frame-executive/try-runtime",

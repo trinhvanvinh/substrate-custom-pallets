@@ -3,18 +3,22 @@
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as Template;
+use crate::Pallet as Kitties;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
 benchmarks! {
-	do_something {
-		let s in 0 .. 100;
+	create_kitty {
+		// khởi tạo các tham số cho extrinsic benchmark
+		let dnas : Vec<u8> = b"vinh".to_vec();
+
 		let caller: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Signed(caller), s)
+	}: create_kitty (RawOrigin::Signed(caller), dnas, 1)
+
+	// kiểm tra lại trạng thái storage khi thực hiện extrinsic xem đúng chưa
 	verify {
-		assert_eq!(Something::<T>::get(), Some(s));
+		assert_eq!(KittyId::<T>::get(), 1);
 	}
 
-	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);
+	impl_benchmark_test_suite!(Kitties, crate::mock::new_test_ext(), crate::mock::Test);
 }

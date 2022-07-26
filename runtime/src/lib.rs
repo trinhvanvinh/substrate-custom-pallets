@@ -284,7 +284,7 @@ impl pallet_kitties::Config for Runtime {
 	type Time = Timestamp;
 }
 
-parameter_types!{
+parameter_types! {
 	pub const MaxKittyOwned: u32 = 5;
 }
 impl pallet_kitties_v2::Config for Runtime {
@@ -378,8 +378,8 @@ mod benches {
 		[pallet_template, TemplateModule]
 
 
-		[pallet_demo, DemoModule]
-		[pallet_kitties, KittiesModule]
+		// [pallet_demo, DemoModule]
+		// [pallet_kitties, KittiesModule]
 
 		[pallet_kitties_v2, KittiesModuleV2]
 	);
