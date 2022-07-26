@@ -4,6 +4,7 @@ use super::*;
 
 #[allow(unused)]
 use crate::Pallet as Kitties;
+use frame_benchmarking::account;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
@@ -19,6 +20,13 @@ benchmarks! {
 	verify {
 		assert_eq!(KittyId::<T>::get(), 1);
 	}
+
+	transfer{
+		let dnas: Vec<u8> = b"vinh".to_vec();
+		let caller: T::AccountId= whitelisted_caller();
+		let to: T::AccountId = account("to",  2u32,  2u32);
+	}: transfer(RawOrigin::Signed(caller), dnas, to)
+
 
 	impl_benchmark_test_suite!(Kitties, crate::mock::new_test_ext(), crate::mock::Test);
 }

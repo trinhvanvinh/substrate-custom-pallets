@@ -44,7 +44,7 @@ impl<T: frame_system::Config> pallet_kitties_v2::WeightInfo for WeightInfo<T> {
 	// Storage: KittiesModuleV2 KittyId (r:1 w:1)
 	// Storage: KittiesModuleV2 KittiesOwned (r:1 w:1)
 	fn create_kitty() -> Weight {
-		(30_000_000 as Weight)
+		(32_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}

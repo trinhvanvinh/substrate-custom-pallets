@@ -16,7 +16,12 @@ fn create_kitty() {
 		let mut vec = Vec::new();
 		vec.push(1);
 		assert_ok!(KittiesModuleV2::create_kitty(Origin::signed(1), vec, 1));
-
-		
 	});
 }
+
+// #[test]
+// fn transfer(){
+// 	new_test_ext().execute_with(||{
+
+// 	});
+// }
