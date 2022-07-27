@@ -188,7 +188,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(31_000_000 + T::DbWeight::get().reads_writes(6,4))]
 		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>, price: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			log::info!("total balance {:?}", T::Currency::total_balance(&who));
@@ -227,7 +227,7 @@ pub mod pallet {
 
 			Ok(())
 		}
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(21_000_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn transfer(origin: OriginFor<T>, dna: Vec<u8>, to: T::AccountId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut _kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::NoKitty)?;

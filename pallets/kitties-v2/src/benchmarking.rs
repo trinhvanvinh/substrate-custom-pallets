@@ -24,7 +24,9 @@ benchmarks! {
 	transfer{
 		let dnas: Vec<u8> = b"vinh".to_vec();
 		let caller: T::AccountId= whitelisted_caller();
-		let to: T::AccountId = account("to",  2u32,  2u32);
+		let to: T::AccountId = account("receiver", 0, 0);
+		let from = <T as frame_system::Config>::Origin::from( RawOrigin::Signed(caller.clone()));
+		Kitties::<T>::create_kitty(from, dnas.clone(), 1);
 	}: transfer(RawOrigin::Signed(caller), dnas, to)
 
 
