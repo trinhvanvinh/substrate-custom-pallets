@@ -22,6 +22,7 @@ use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::traits::Currency;
 use frame_support::traits::Randomness;
 use frame_support::traits::Time;
+
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_io::hashing::blake2_128;
@@ -106,6 +107,12 @@ pub mod pallet {
 	pub(super) type KittiesOwned<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<Vec<u8>>, ValueQuery>;
 
+		#[pallet::storage]
+		#[pallet::getter(fn kitty_owned_genesis)]
+		pub(super) type KittiesOwnedGenesis<T: Config> =
+			StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, ValueQuery>;
+	
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
@@ -147,6 +154,37 @@ pub mod pallet {
 
 		ExceedMaxKittyOwned,
 	}
+
+
+	// === exercise 4 ====
+	// the genesis config type
+	
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T:Config>{
+		pub _kitties: Vec< ( T::AccountId, Vec<u8>) > ,
+		
+	}
+
+	// the default value for the genesis config type
+	#[cfg(feature="std")]
+	impl<T:Config> Default for GenesisConfig<T>{
+		fn default()-> GenesisConfig<T>{
+		GenesisConfig{
+			_kitties: vec![],	
+		}
+		}
+	}
+	
+	// the build of genesis for the pallet
+	#[pallet::genesis_build]
+	impl<T:Config> GenesisBuild<T> for GenesisConfig<T>{
+		fn build(&self){
+			for(b,c) in &self._kitties{
+				let k = <Pallet<T>>::fixKittyForAlice(b.clone(),c.clone());
+			}	
+		}
+	}
+
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -259,10 +297,21 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		
+
 	}
 }
 
 impl<T: Config> Pallet<T> {
+
+	
+	pub fn fixKittyForAlice(who: T::AccountId, dna: Vec<u8>) -> DispatchResult{
+		KittiesOwned::<T>::append(who, dna);
+
+		Ok(())
+	}
+
 	fn gen_gender(dna: &Vec<u8>) -> Result<Gender, Error<T>> {
 		let mut res = Gender::Female;
 		if dna.len() % 2 == 0 {
@@ -291,4 +340,30 @@ impl<T: Config> Pallet<T> {
 		}
 		nonce.encode()
 	}
+
+	// pub fn mint(
+	// 	owner: &T::AccountId,
+	// 	dna: Option<[u8; 16]>,
+	// 	gender: Option<Gender>,
+	// ) -> Result<T::Hash, Error<T>> {
+	// 	let kitty = Kitty::<T> {
+	// 		dna: dna.unwrap_or_else(Self::gen_dna),
+	// 		price: None,
+	// 		gender: gender.unwrap_or_else(Self::gen_gender),
+	// 		owner: owner.clone(),
+	// 	};
+	
+	// 	let kitty_id = T::Hashing::hash_of(&kitty);
+	
+	// 	// Performs this operation first as it may fail
+	// 	let new_cnt = Self::kitty_cnt().checked_add(1)
+	// 	.ok_or(<Error<T>>::KittyCntOverflow)?;
+	
+	// 	// Performs this operation first because as it may fail
+	// 	<KittiesOwned<T>>::try_mutate(&owner, |kitty_vec| {kitty_vec.try_push(kitty_id)}).map_err(|_| <Error<T>>::ExceedMaxKittyOwned)?;
+	
+	// 	<Kitties<T>>::insert(kitty_id, kitty);
+	// 	<KittyCnt<T>>::put(new_cnt);
+	// 	Ok(kitty_id)
+	// }
 }
