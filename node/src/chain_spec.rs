@@ -1,12 +1,13 @@
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY, TemplateModuleConfig, KittiesModuleConfig
+	SystemConfig, WASM_BINARY, TemplateModuleConfig, KittiesModuleV2Config
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -157,8 +158,10 @@ fn testnet_genesis(
 			genesis_value: 5u32
 		},
 
-		kittie_module: KittiesModuleConfig{
-			_kitties: vec![]
+		kitties_module_v2: KittiesModuleV2Config{
+			genesis_kitties: vec![],
+			owner: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+			current_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
 		}
 	}
 }

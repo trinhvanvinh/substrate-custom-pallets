@@ -41,7 +41,8 @@ pub mod pallet {
 		owner: T::AccountId,
 		price: u32,
 		gender: Gender,
-		created_date: <<T as Config>::Time as Time>::Moment,
+		//created_date: <<T as Config>::Time as Time>::Moment,
+		created_date: u64,
 	}
 
 	// impl Debug trait Kitty
@@ -161,8 +162,11 @@ pub mod pallet {
 	
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T:Config>{
-		pub _kitties: Vec< ( T::AccountId, Vec<u8>) > ,
-		
+		//pub _kitties: Vec< ( T::AccountId, Vec<u8>) > ,
+
+		pub genesis_kitties: Vec<Vec<u8>>,
+		pub owner: Option<T::AccountId>,
+		pub current_time: u64
 	}
 
 	// the default value for the genesis config type
@@ -170,7 +174,10 @@ pub mod pallet {
 	impl<T:Config> Default for GenesisConfig<T>{
 		fn default()-> GenesisConfig<T>{
 		GenesisConfig{
-			_kitties: vec![],	
+			//_kitties: vec![],	
+			genesis_kitties: Default::default(),
+			owner: Default::default(),
+			current_time: 0
 		}
 		}
 	}
@@ -179,9 +186,21 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T:Config> GenesisBuild<T> for GenesisConfig<T>{
 		fn build(&self){
-			for(b,c) in &self._kitties{
-				let k = <Pallet<T>>::fixKittyForAlice(b.clone(),c.clone());
-			}	
+			// for(b,c) in &self._kitties{
+			// 	let k = <Pallet<T>>::fixKittyForAlice(b.clone(),c.clone());
+			// }
+			
+			for item in self.genesis_kitties.iter(){
+				let kitty = Kitty::<T>{
+					dna: Pallet::<T>::gen_dna(),
+					owner: self.owner.clone().unwrap(),
+					price: 1,
+					gender: Gender::Male,
+					created_date: self.current_time
+				};
+				Kitties::insert(item, kitty);
+			}
+			
 		}
 	}
 
@@ -237,7 +256,8 @@ pub mod pallet {
 				owner: who.clone(),
 				price,
 				gender: _gender,
-				created_date: T::Time::now(),
+				//created_date: T::Time::now(),
+				created_date: 0,
 			};
 			// check not exist
 			ensure!(!Kitties::<T>::contains_key(&dna), Error::<T>::DuplicateKitty);
