@@ -23,6 +23,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use frame_system::EnsureRoot;
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types,
@@ -286,6 +288,9 @@ impl pallet_kitties::Config for Runtime {
 
 parameter_types! {
 	pub const MaxKittyOwned: u32 = 5;
+	pub const ReservationFee: Balance = 1_000_000;
+	pub const MinLength:u32 = 10;
+	pub const MaxLength:u32 = 20;
 }
 impl pallet_kitties_v2::Config for Runtime {
 	type Event = Event;
@@ -304,6 +309,19 @@ impl pallet_tightly_coupling::Config for Runtime {
 impl pallet_loosely_coupling::Config for Runtime {
 	type Event = Event;
 	type Increase = TemplateModule;
+}
+
+
+
+// import nick
+impl pallet_nicks::Config for Runtime{
+	type Event = Event;
+	type Currency = Balances;
+	type ReservationFee = ReservationFee;
+	type Slashed = ();
+	type ForceOrigin = EnsureRoot<Self::AccountId>;
+	type MinLength = MinLength;
+	type MaxLength = MaxLength;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -331,6 +349,8 @@ construct_runtime!(
 
 		TightlyCouplingModule: pallet_tightly_coupling,
 		LooselyCouplingModule: pallet_loosely_coupling,
+
+		Nicks: pallet_nicks
 	}
 );
 
